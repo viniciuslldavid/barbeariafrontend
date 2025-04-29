@@ -1,11 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, Typography, TextField, MenuItem, Select, Button, FormControl, InputLabel } from '@mui/material';
-import FullCalendar from '@fullcalendar/react';
-import dayGridPlugin from '@fullcalendar/daygrid';
-import interactionPlugin from '@fullcalendar/interaction';
 import { getBarbers, getServices, createSchedule, createPublicSchedule, getAvailableTimes } from '../services/api';
-import '../styles/fullcalendar.css';
 
 const SchedulePage = ({ user }) => {
   const [barbers, setBarbers] = useState([]);
@@ -34,32 +30,19 @@ const SchedulePage = ({ user }) => {
     fetchData();
   }, []);
 
-  const handleDateSelect = async (selectInfo) => {
-    const selectedDate = selectInfo.startStr; // Formato: YYYY-MM-DD
-    setFormData({ ...formData, date: selectedDate });
-
-    if (formData.barberId) {
-      try {
-        const response = await getAvailableTimes(selectedDate, formData.barberId);
-        setAvailableTimes(response.data);
-      } catch (error) {
-        console.error('Erro ao buscar horários disponíveis:', error);
-        setAvailableTimes([]);
-      }
-    }
-  };
-
   const handleChange = async (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
 
-    if (name === 'barberId' && formData.date) {
-      try {
-        const response = await getAvailableTimes(formData.date, value);
-        setAvailableTimes(response.data);
-      } catch (error) {
-        console.error('Erro ao buscar horários disponíveis:', error);
-        setAvailableTimes([]);
+    if (name === 'date' || name === 'barberId') {
+      if (formData.date && formData.barberId) {
+        try {
+          const response = await getAvailableTimes(formData.date, formData.barberId);
+          setAvailableTimes(response.data);
+        } catch (error) {
+          console.error('Erro ao buscar horários disponíveis:', error);
+          setAvailableTimes([]);
+        }
       }
     }
   };
@@ -132,30 +115,18 @@ const SchedulePage = ({ user }) => {
           </Select>
         </FormControl>
 
-        <Box sx={{ mb: 2 }}>
-          <Typography variant="h6" color="#FFD700" gutterBottom>
-            Selecione a Data
-          </Typography>
-          <FullCalendar
-            plugins={[dayGridPlugin, interactionPlugin]}
-            initialView="dayGridMonth"
-            selectable={true}
-            select={handleDateSelect}
-            selectConstraint={{
-              start: new Date(), // Impede a seleção de datas passadas
-            }}
-            height="auto"
-            locale="pt-br"
-            headerToolbar={{
-              left: 'prev,next today',
-              center: 'title',
-              right: '',
-            }}
-            buttonText={{
-              today: 'Hoje',
-            }}
-          />
-        </Box>
+        <TextField
+          label="Data (YYYY-MM-DD)"
+          name="date"
+          type="date"
+          value={formData.date}
+          onChange={handleChange}
+          fullWidth
+          required
+          InputLabelProps={{ shrink: true }}
+          inputProps={{ min: new Date().toISOString().split('T')[0] }} // Impede datas passadas
+          sx={{ mb: 2, backgroundColor: '#2a2a2a', input: { color: '#fff' }, label: { color: '#FFD700' } }}
+        />
 
         {formData.date && formData.barberId && (
           <FormControl fullWidth sx={{ mb: 2 }}>
