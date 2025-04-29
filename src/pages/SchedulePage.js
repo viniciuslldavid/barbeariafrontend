@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, Typography, TextField, MenuItem, Select, Button, FormControl, InputLabel } from '@mui/material';
-import { getBarbers, getServices, createSchedule, createPublicSchedule, getAvailableTimes } from '../services/api';
+import { getBarbers, getServices, createSchedule, createPublicSchedule } from '../services/api';
 
 const SchedulePage = ({ user }) => {
   const [barbers, setBarbers] = useState([]);
@@ -14,7 +14,6 @@ const SchedulePage = ({ user }) => {
     userName: '',
     userPhone: '',
   });
-  const [availableTimes, setAvailableTimes] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -30,39 +29,30 @@ const SchedulePage = ({ user }) => {
     fetchData();
   }, []);
 
-  const handleChange = async (e) => {
+  const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
-
-    if (name === 'date' || name === 'barberId') {
-      if (formData.date && formData.barberId) {
-        try {
-          const response = await getAvailableTimes(formData.date, formData.barberId);
-          setAvailableTimes(response.data);
-        } catch (error) {
-          console.error('Erro ao buscar horários disponíveis:', error);
-          setAvailableTimes([]);
-        }
-      }
-    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      // Adiciona os segundos ao formato do horário (HH:MM para HH:MM:SS)
+      const formattedTime = `${formData.time}:00`;
+
       if (user) {
         await createSchedule({
           serviceId: formData.serviceId,
           barberId: formData.barberId,
           date: formData.date,
-          time: formData.time,
+          time: formattedTime,
         });
       } else {
         await createPublicSchedule({
           serviceId: formData.serviceId,
           barberId: formData.barberId,
           date: formData.date,
-          time: formData.time,
+          time: formattedTime,
           userName: formData.userName,
           userPhone: formData.userPhone,
         });
@@ -71,7 +61,7 @@ const SchedulePage = ({ user }) => {
       navigate(user ? '/my-schedules' : '/');
     } catch (error) {
       console.error('Erro ao criar agendamento:', error);
-      alert('Erro ao criar agendamento.');
+      alert(error.response?.data?.message || 'Erro ao criar agendamento.');
     }
   };
 
@@ -128,28 +118,17 @@ const SchedulePage = ({ user }) => {
           sx={{ mb: 2, backgroundColor: '#2a2a2a', input: { color: '#fff' }, label: { color: '#FFD700' } }}
         />
 
-        {formData.date && formData.barberId && (
-          <FormControl fullWidth sx={{ mb: 2 }}>
-            <InputLabel sx={{ color: '#FFD700' }}>Horário Disponível</InputLabel>
-            <Select
-              name="time"
-              value={formData.time}
-              onChange={handleChange}
-              required
-              sx={{ color: '#fff', backgroundColor: '#2a2a2a', '& .MuiSvgIcon-root': { color: '#FFD700' } }}
-            >
-              {availableTimes.length > 0 ? (
-                availableTimes.map((time) => (
-                  <MenuItem key={time} value={time}>
-                    {time.slice(0, 5)} {/* Exibe apenas HH:MM */}
-                  </MenuItem>
-                ))
-              ) : (
-                <MenuItem disabled>Nenhum horário disponível</MenuItem>
-              )}
-            </Select>
-          </FormControl>
-        )}
+        <TextField
+          label="Horário (HH:MM)"
+          name="time"
+          type="time"
+          value={formData.time}
+          onChange={handleChange}
+          fullWidth
+          required
+          InputLabelProps={{ shrink: true }}
+          sx={{ mb: 2, backgroundColor: '#2a2a2a', input: { color: '#fff' }, label: { color: '#FFD700' } }}
+        />
 
         {!user && (
           <>
